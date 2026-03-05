@@ -6,6 +6,11 @@ This installs **DawsOS** from the canonical private engine repo and launches the
 - You have accepted the GitHub invite to the private repos.
 - Docker Desktop installed and running.
 
+Quick access proof (optional):
+```bash
+gh repo view mwd474747/dawsos-engine --json name,viewerPermission
+```
+
 ## One command (copy/paste)
 
 ```bash
@@ -73,8 +78,8 @@ else
   git checkout "$ENGINE_REF"
 fi
 
-# 5) Run wizard
-python3 dawsco-engine/scripts/install/andrew_install_wizard.py
+# 5) Run wizard (from the engine repo root)
+python3 scripts/install/andrew_install_wizard.py
 SH
 ```
 
