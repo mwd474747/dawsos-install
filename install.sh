@@ -15,7 +15,7 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.5"
+INSTALLER_VERSION="install-v1.0.6"
 ENGINE_BUNDLE_TAG="andrew-v1-a7f6da3"
 ENGINE_ASSET="dawsos-engine-a7f6da3.tar.gz"
 ENGINE_SHA256_ASSET="dawsos-engine-a7f6da3.tar.gz.sha256"
@@ -74,7 +74,6 @@ fi
 
 log "4/7 Extract bundle (versioned)"
 rm -rf "$ENGINE_BUNDLE_DIR"
-mkdir -p "$ENGINE_BUNDLE_DIR"
 
 # Extract into a temp dir, then move the single top-level folder into ENGINE_BUNDLE_DIR.
 EXTRACT_DIR="$BUNDLES_DIR/.extract-$ENGINE_BUNDLE_TAG"
