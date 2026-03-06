@@ -15,7 +15,7 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.3"
+INSTALLER_VERSION="install-v1.0.4"
 ENGINE_BUNDLE_TAG="andrew-v1-c34ccfe"
 ENGINE_ASSET="dawsos-engine-c34ccfe.tar.gz"
 ENGINE_SHA256_ASSET="dawsos-engine-c34ccfe.tar.gz.sha256"
@@ -74,11 +74,20 @@ fi
 log "4/7 Extract bundle (versioned)"
 rm -rf "$ENGINE_BUNDLE_DIR"
 mkdir -p "$ENGINE_BUNDLE_DIR"
-# Artifact contains top-level folder dawsos-engine-dbdb270/
-tar -xzf "$TMP" -C "$BUNDLES_DIR"
-# Normalize folder name inside bundle dir
-rm -rf "$ENGINE_BUNDLE_DIR"
-mv "$BUNDLES_DIR/dawsos-engine-dbdb270" "$ENGINE_BUNDLE_DIR"
+
+# Extract into a temp dir, then move the single top-level folder into ENGINE_BUNDLE_DIR.
+EXTRACT_DIR="$BUNDLES_DIR/.extract-$ENGINE_BUNDLE_TAG"
+rm -rf "$EXTRACT_DIR"
+mkdir -p "$EXTRACT_DIR"
+tar -xzf "$TMP" -C "$EXTRACT_DIR"
+
+# Expect exactly one top-level directory.
+TOP_COUNT="$(find "$EXTRACT_DIR" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
+[ "$TOP_COUNT" = "1" ] || die "Unexpected bundle layout (expected 1 top-level dir, got $TOP_COUNT)"
+TOP_DIR="$(find "$EXTRACT_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+
+mv "$TOP_DIR" "$ENGINE_BUNDLE_DIR"
+rm -rf "$EXTRACT_DIR"
 
 log "5/8 Point workspace at bundle (symlink)"
 rm -rf "$ENGINE_DIR"
