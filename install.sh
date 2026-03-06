@@ -15,10 +15,10 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.4"
-ENGINE_BUNDLE_TAG="andrew-v1-c34ccfe"
-ENGINE_ASSET="dawsos-engine-c34ccfe.tar.gz"
-ENGINE_SHA256_ASSET="dawsos-engine-c34ccfe.tar.gz.sha256"
+INSTALLER_VERSION="install-v1.0.5"
+ENGINE_BUNDLE_TAG="andrew-v1-a7f6da3"
+ENGINE_ASSET="dawsos-engine-a7f6da3.tar.gz"
+ENGINE_SHA256_ASSET="dawsos-engine-a7f6da3.tar.gz.sha256"
 
 ENGINE_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_ASSET}"
 ENGINE_SHA256_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_SHA256_ASSET}"
@@ -26,6 +26,7 @@ ENGINE_SHA256_URL="https://github.com/mwd474747/dawsos-install/releases/download
 WS="${WS:-$HOME/.openclaw/workspace}"
 BUNDLES_DIR="$WS/engine-bundles"
 ENGINE_BUNDLE_DIR="$BUNDLES_DIR/$ENGINE_BUNDLE_TAG"
+ACTIVE_LINK="$BUNDLES_DIR/active"
 ENGINE_DIR="$WS/dawsos-engine"
 TMP="/tmp/$ENGINE_ASSET"
 TMP_SHA="/tmp/$ENGINE_SHA256_ASSET"
@@ -89,11 +90,15 @@ TOP_DIR="$(find "$EXTRACT_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
 mv "$TOP_DIR" "$ENGINE_BUNDLE_DIR"
 rm -rf "$EXTRACT_DIR"
 
-log "5/8 Point workspace at bundle (symlink)"
-rm -rf "$ENGINE_DIR"
-ln -s "$ENGINE_BUNDLE_DIR" "$ENGINE_DIR"
+log "5/7 Set active bundle pointer"
+rm -rf "$ACTIVE_LINK"
+ln -s "$ENGINE_BUNDLE_DIR" "$ACTIVE_LINK"
 
-log "5/7 Ensure Node.js + OpenClaw"
+log "6/7 Point workspace engine symlink at active"
+rm -rf "$ENGINE_DIR"
+ln -s "$ACTIVE_LINK" "$ENGINE_DIR"
+
+log "7/7 Ensure Node.js + OpenClaw"
 
 brew_shellenv() {
   if [ -x /opt/homebrew/bin/brew ]; then eval "$(/opt/homebrew/bin/brew shellenv)"; return 0; fi
@@ -124,7 +129,7 @@ if ! command -v openclaw >/dev/null 2>&1; then
   npm install -g openclaw
 fi
 
-log "6/7 Run wizard"
+log "8/8 Validate bundle manifest + run wizard"
 cd "$ENGINE_DIR"
 
 # Write an explicit bootstrap receipt (control-surface friendly)
@@ -146,9 +151,17 @@ cat > "$RECEIPT" <<JSON
   "engine_sha256_got": "${GOT}",
   "workspace": "${WS}",
   "engine_dir": "${ENGINE_DIR}",
-  "engine_bundle_dir": "${ENGINE_BUNDLE_DIR}"
+  "engine_bundle_dir": "${ENGINE_BUNDLE_DIR}",
+  "active_link": "${ACTIVE_LINK}"
 }
 JSON
+
+# Validate bundle manifest before running (catches bad extractions early)
+python3 scripts/ops/bundle_manifest_validate.py >/dev/null 2>&1 || {
+  echo "ERROR: bundle-manifest validation failed." >&2
+  python3 scripts/ops/bundle_manifest_validate.py >&2 || true
+  exit 1
+}
 
 # Only forward arguments if explicitly provided (avoid passing stray 'bash' when piped)
 if [ "$#" -gt 0 ]; then
