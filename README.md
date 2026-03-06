@@ -12,7 +12,7 @@ Public installer entrypoint for DawsOS installs.
 
 ```bash
 # Recommended (immutable tag; avoids cache issues)
-curl -fsSL https://raw.githubusercontent.com/mwd474747/dawsos-install/install-v1.0.8/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/mwd474747/dawsos-install/install-v1.0.9/install.sh | bash
 ```
 
 (Dev only / may be cached):
@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/mwd474747/dawsos-install/main/insta
 
 Dry-run (diagnostic):
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mwd474747/dawsos-install/install-v1.0.8/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/mwd474747/dawsos-install/install-v1.0.9/install.sh | bash -s -- --dry-run
 ```
 
 What it does:
