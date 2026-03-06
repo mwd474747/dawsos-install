@@ -15,10 +15,10 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.1"
-ENGINE_BUNDLE_TAG="andrew-v1-dbdb270"
-ENGINE_ASSET="dawsos-engine-dbdb270.tar.gz"
-ENGINE_SHA256_ASSET="dawsos-engine-dbdb270.tar.gz.sha256"
+INSTALLER_VERSION="install-v1.0.2"
+ENGINE_BUNDLE_TAG="andrew-v1-e3f6905"
+ENGINE_ASSET="dawsos-engine-e3f6905.tar.gz"
+ENGINE_SHA256_ASSET="dawsos-engine-e3f6905.tar.gz.sha256"
 
 ENGINE_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_ASSET}"
 ENGINE_SHA256_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_SHA256_ASSET}"
@@ -84,13 +84,7 @@ log "5/8 Point workspace at bundle (symlink)"
 rm -rf "$ENGINE_DIR"
 ln -s "$ENGINE_BUNDLE_DIR" "$ENGINE_DIR"
 
-# Compatibility: the wizard/stages reference a workspace-local `dawsco-engine/` path.
-# In artifact mode, the engine bundle lives under `dawsos-engine/`.
-log "6/8 Create workspace compatibility symlink (dawsco-engine)"
-rm -rf "$WS/dawsco-engine"
-ln -s "$ENGINE_DIR/dawsco-engine" "$WS/dawsco-engine"
-
-log "7/8 Ensure Node.js + OpenClaw"
+log "5/7 Ensure Node.js + OpenClaw"
 
 brew_shellenv() {
   if [ -x /opt/homebrew/bin/brew ]; then eval "$(/opt/homebrew/bin/brew shellenv)"; return 0; fi
@@ -121,7 +115,7 @@ if ! command -v openclaw >/dev/null 2>&1; then
   npm install -g openclaw
 fi
 
-log "8/8 Run wizard"
+log "6/7 Run wizard"
 cd "$ENGINE_DIR"
 
 # Write an explicit bootstrap receipt (control-surface friendly)
