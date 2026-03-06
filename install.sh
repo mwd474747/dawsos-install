@@ -15,7 +15,7 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.6"
+INSTALLER_VERSION="install-v1.0.7"
 ENGINE_BUNDLE_TAG="andrew-v1-a7f6da3"
 ENGINE_ASSET="dawsos-engine-a7f6da3.tar.gz"
 ENGINE_SHA256_ASSET="dawsos-engine-a7f6da3.tar.gz.sha256"
@@ -88,6 +88,21 @@ TOP_DIR="$(find "$EXTRACT_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
 
 mv "$TOP_DIR" "$ENGINE_BUNDLE_DIR"
 rm -rf "$EXTRACT_DIR"
+
+# Stamp bundle manifest with bundle_id (best-effort)
+if [ -f "$ENGINE_BUNDLE_DIR/bundle-manifest.json" ]; then
+  python3 - <<PY || true
+import json
+from pathlib import Path
+p=Path(r"$ENGINE_BUNDLE_DIR")/"bundle-manifest.json"
+try:
+    d=json.loads(p.read_text(encoding='utf-8'))
+    d['bundle_id']=r"$ENGINE_BUNDLE_TAG"
+    p.write_text(json.dumps(d, indent=2)+"\n", encoding='utf-8')
+except Exception:
+    pass
+PY
+fi
 
 log "5/7 Set active bundle pointer"
 rm -rf "$ACTIVE_LINK"
