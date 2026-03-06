@@ -15,10 +15,10 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.16"
-ENGINE_BUNDLE_TAG="dawsos-bundle-v1-4c8b1e6"
-ENGINE_ASSET="dawsos-engine-4c8b1e6.tar.gz"
-ENGINE_SHA256_ASSET="dawsos-engine-4c8b1e6.tar.gz.sha256"
+INSTALLER_VERSION="install-v1.0.17"
+ENGINE_BUNDLE_TAG="dawsos-bundle-v1-ccd2d78"
+ENGINE_ASSET="dawsos-engine-ccd2d78.tar.gz"
+ENGINE_SHA256_ASSET="dawsos-engine-ccd2d78.tar.gz.sha256"
 
 ENGINE_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_ASSET}"
 ENGINE_SHA256_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_SHA256_ASSET}"
@@ -107,6 +107,34 @@ fi
 log "5/7 Set active bundle pointer"
 rm -rf "$ACTIVE_LINK"
 ln -s "$ENGINE_BUNDLE_DIR" "$ACTIVE_LINK"
+
+# Write an explicit marker to eliminate guesswork when debugging.
+ACTIVE_JSON="$BUNDLES_DIR/ACTIVE.json"
+python3 - <<PY || true
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+p=Path(r"$ENGINE_BUNDLE_DIR")/"bundle-manifest.json"
+manifest={}
+try:
+    if p.exists():
+        manifest=json.loads(p.read_text(encoding='utf-8'))
+except Exception:
+    manifest={}
+out={
+  "installed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),
+  "installer_version": r"$INSTALLER_VERSION",
+  "engine_bundle_tag": r"$ENGINE_BUNDLE_TAG",
+  "engine_bundle_dir": r"$ENGINE_BUNDLE_DIR",
+  "bundle_manifest": {
+    "bundle_id": manifest.get("bundle_id"),
+    "bundle_tag": manifest.get("bundle_tag") or manifest.get("tag") or manifest.get("id"),
+    "engine_commit": manifest.get("engine_commit") or manifest.get("commit"),
+  },
+}
+Path(r"$ACTIVE_JSON").write_text(json.dumps(out,indent=2)+"\n",encoding='utf-8')
+print("WROTE", r"$ACTIVE_JSON")
+PY
 
 log "6/8 Point workspace engine symlink at active"
 rm -rf "$ENGINE_DIR"
