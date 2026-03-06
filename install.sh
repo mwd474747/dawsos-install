@@ -15,7 +15,7 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.23"
+INSTALLER_VERSION="install-v1.0.24"
 ENGINE_BUNDLE_TAG="dawsos-bundle-v1-bc001ab"
 ENGINE_ASSET="dawsos-engine-bc001ab.tar.gz"
 ENGINE_SHA256_ASSET="dawsos-engine-bc001ab.tar.gz.sha256"
@@ -144,12 +144,15 @@ log "6/8 Point workspace engine symlink at active"
 rm -rf "$ENGINE_DIR"
 ln -s "$ACTIVE_LINK" "$ENGINE_DIR"
 
-log "7/8 Legacy-compat symlink (optional): dawsco-engine"
-# Migration guard: many legacy scripts/cron payloads may still reference $WS/dawsco-engine.
-# Create a compat symlink unless explicitly disabled.
-if [ "${DAWSOS_DISABLE_DAWSCO_ENGINE_COMPAT:-}" != "1" ]; then
+log "7/8 Legacy-compat symlink: dawsco-engine (OFF by default)"
+# Aggressive posture: disable legacy compat by default to surface breakage quickly.
+# Opt-in by setting: DAWSOS_ENABLE_DAWSCO_ENGINE_COMPAT=1
+if [ "${DAWSOS_ENABLE_DAWSCO_ENGINE_COMPAT:-}" = "1" ]; then
   rm -rf "$WS/dawsco-engine"
   ln -s "$ENGINE_DIR" "$WS/dawsco-engine"
+  log "compat: enabled ($WS/dawsco-engine -> $ENGINE_DIR)"
+else
+  log "compat: disabled (set DAWSOS_ENABLE_DAWSCO_ENGINE_COMPAT=1 to enable)"
 fi
 
 log "8/9 Ensure Node.js + OpenClaw"
