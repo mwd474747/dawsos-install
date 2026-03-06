@@ -15,10 +15,10 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.22"
-ENGINE_BUNDLE_TAG="dawsos-bundle-v1-ecc433f"
-ENGINE_ASSET="dawsos-engine-ecc433f.tar.gz"
-ENGINE_SHA256_ASSET="dawsos-engine-ecc433f.tar.gz.sha256"
+INSTALLER_VERSION="install-v1.0.23"
+ENGINE_BUNDLE_TAG="dawsos-bundle-v1-bc001ab"
+ENGINE_ASSET="dawsos-engine-bc001ab.tar.gz"
+ENGINE_SHA256_ASSET="dawsos-engine-bc001ab.tar.gz.sha256"
 
 ENGINE_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_ASSET}"
 ENGINE_SHA256_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_SHA256_ASSET}"
@@ -89,7 +89,7 @@ TOP_DIR="$(find "$EXTRACT_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
 mv "$TOP_DIR" "$ENGINE_BUNDLE_DIR"
 rm -rf "$EXTRACT_DIR"
 
-# Stamp bundle manifest with bundle_id (best-effort)
+# Stamp bundle manifest with bundle_id + installer metadata (best-effort)
 if [ -f "$ENGINE_BUNDLE_DIR/bundle-manifest.json" ]; then
   python3 - <<PY || true
 import json
@@ -98,6 +98,10 @@ p=Path(r"$ENGINE_BUNDLE_DIR")/"bundle-manifest.json"
 try:
     d=json.loads(p.read_text(encoding='utf-8'))
     d['bundle_id']=r"$ENGINE_BUNDLE_TAG"
+    d['bundle_tag']=r"$ENGINE_BUNDLE_TAG"
+    # Engine asset filenames are commit-pinned (dawsos-engine-<sha>.tar.gz)
+    d['engine_commit']=r"$ENGINE_ASSET".replace('dawsos-engine-','').replace('.tar.gz','')
+    d['installer_version']=r"$INSTALLER_VERSION"
     p.write_text(json.dumps(d, indent=2)+"\n", encoding='utf-8')
 except Exception:
     pass
