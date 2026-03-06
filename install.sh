@@ -100,8 +100,8 @@ fi
 log "6/6 Run wizard"
 cd "$ENGINE_DIR"
 # Only forward arguments if explicitly provided (avoid passing stray 'bash' when piped)
-WIZ_ARGS=()
 if [ "$#" -gt 0 ]; then
-  WIZ_ARGS=("$@")
+  python3 scripts/install/andrew_install_wizard.py "$@"
+else
+  python3 scripts/install/andrew_install_wizard.py
 fi
-python3 scripts/install/andrew_install_wizard.py "${WIZ_ARGS[@]}"
