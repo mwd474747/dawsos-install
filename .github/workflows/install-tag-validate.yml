@@ -1,0 +1,28 @@
+name: install-tag-validate
+
+on:
+  push:
+    tags:
+      - 'install-v*'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show tag
+        run: |
+          echo "GITHUB_REF_NAME=$GITHUB_REF_NAME"
+
+      - name: Basic tag format sanity
+        run: |
+          [[ "$GITHUB_REF_NAME" =~ ^install-v[0-9]+\.[0-9]+\.[0-9]+$ ]] || (echo "Bad installer tag" && exit 1)
+
+      - name: Smoke: download install.sh from this tag
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/install.sh" | head -n 30
+
+      - name: Note
+        run: |
+          echo "Full macOS clean-room simulation runs locally (ephemeral HOME) and should be promoted to a dedicated macOS runner when available."
