@@ -15,10 +15,10 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.26"
-ENGINE_BUNDLE_TAG="dawsos-bundle-v1-c5bdb8d"
-ENGINE_ASSET="dawsos-engine-c5bdb8d.tar.gz"
-ENGINE_SHA256_ASSET="dawsos-engine-c5bdb8d.tar.gz.sha256"
+INSTALLER_VERSION="install-v1.0.27"
+ENGINE_BUNDLE_TAG="dawsos-bundle-v1-992f244"
+ENGINE_ASSET="dawsos-engine-992f244.tar.gz"
+ENGINE_SHA256_ASSET="dawsos-engine-992f244.tar.gz.sha256"
 
 ENGINE_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_ASSET}"
 ENGINE_SHA256_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_SHA256_ASSET}"
@@ -192,12 +192,12 @@ cd "$ENGINE_DIR"
 # Write an explicit bootstrap receipt (control-surface friendly)
 OPS_DIR="$WS/reports/ops"
 mkdir -p "$OPS_DIR"
-RECEIPT="$OPS_DIR/andrew-install-artifact-bootstrap-receipt-latest.json"
+RECEIPT="$OPS_DIR/partner-install-artifact-bootstrap-receipt-latest.json"
 cat > "$RECEIPT" <<JSON
 {
   "kind": "receipt",
   "schema_version": "0.2.0",
-  "name": "andrew_install_artifact_bootstrap",
+  "name": "partner_install_artifact_bootstrap",
   "status": "pass",
   "installer_version": "${INSTALLER_VERSION}",
   "engine_bundle_tag": "${ENGINE_BUNDLE_TAG}",
@@ -222,7 +222,7 @@ python3 scripts/ops/bundle_manifest_validate.py >/dev/null 2>&1 || {
 
 # Only forward arguments if explicitly provided (avoid passing stray 'bash' when piped)
 if [ "$#" -gt 0 ]; then
-  python3 scripts/install/andrew_install_wizard.py "$@"
+  python3 scripts/install/partner_install_wizard.py "$@"
 else
-  python3 scripts/install/andrew_install_wizard.py
+  python3 scripts/install/partner_install_wizard.py
 fi
