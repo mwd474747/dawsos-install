@@ -6,10 +6,25 @@ This installs **DawsOS** from the canonical private engine repo and launches the
 - You have accepted the GitHub invite to the private repos.
 - Docker Desktop installed and running.
 
-Quick access proof (optional):
+## Git access (this is the #1 install blocker)
+This install clones **private repos**. The easiest login is the GitHub CLI browser/device flow.
+
+**Access proof (run this before the one-liner):**
 ```bash
+# login (browser/device flow)
+gh auth login -h github.com -p https -w
+
+# ensure git uses the right helper
+gh auth setup-git
+
+# prove you can read the private engine repo
+# viewerPermission should be READ (or higher)
 gh repo view mwd474747/dawsos-engine --json name,viewerPermission
 ```
+
+If `viewerPermission` is missing/none or the repo view fails, you likely:
+- haven’t accepted the repo invite yet, or
+- logged into a different GitHub account than the invited one.
 
 ## One command (copy/paste)
 
@@ -60,6 +75,14 @@ if ! gh auth status -h github.com >/dev/null 2>&1; then
 fi
 
 gh auth setup-git || true
+
+# Prove repo access before clone (avoids hanging git prompts)
+if ! gh repo view mwd474747/dawsos-engine --json name,viewerPermission >/dev/null 2>&1; then
+  echo "ERROR: GitHub auth succeeded but repo access failed." >&2
+  echo "- Confirm you accepted the repo invite AND are logged into the invited account." >&2
+  echo "- Then rerun this command." >&2
+  exit 1
+fi
 
 # 3) Docker (required)
 command -v docker >/dev/null 2>&1 || { echo "ERROR: docker CLI not found. Install Docker Desktop first." >&2; exit 1; }
