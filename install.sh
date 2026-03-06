@@ -17,6 +17,7 @@ set -euo pipefail
 
 TAG="andrew-v1-dbdb270"
 ASSET="dawsos-engine-dbdb270.tar.gz"
+SHA256_EXPECTED="50a503717432ed65d4f338cd805e0985981663d5108ac8a60f7fd60110db352b"
 URL="https://github.com/mwd474747/dawsos-install/releases/download/${TAG}/${ASSET}"
 
 WS="${WS:-$HOME/.openclaw/workspace}"
@@ -43,18 +44,28 @@ log "1/4 Docker (required)"
 command -v docker >/dev/null 2>&1 || die "docker CLI not found. Install Docker Desktop first."
 docker info >/dev/null 2>&1 || die "Docker Desktop not running. Start it first."
 
-log "2/4 Download engine bundle"
+log "2/5 Download engine bundle"
 mkdir -p "$WS"
 curl -fL --retry 3 --retry-delay 2 "$URL" -o "$TMP" || die "Failed to download $URL"
 
-log "3/4 Extract + run wizard"
+log "3/5 Verify checksum"
+if command -v shasum >/dev/null 2>&1; then
+  GOT="$(shasum -a 256 "$TMP" | awk '{print $1}')"
+elif command -v sha256sum >/dev/null 2>&1; then
+  GOT="$(sha256sum "$TMP" | awk '{print $1}')"
+else
+  die "No SHA256 tool found (shasum/sha256sum)."
+fi
+[ "$GOT" = "$SHA256_EXPECTED" ] || die "SHA256 mismatch for $ASSET"
+
+log "4/5 Extract bundle"
 rm -rf "$ENGINE_DIR"
-mkdir -p "$ENGINE_DIR"
 # Artifact contains top-level folder dawsos-engine-dbdb270/
 tar -xzf "$TMP" -C "$WS"
 # Normalize folder name
 rm -rf "$ENGINE_DIR"
 mv "$WS/dawsos-engine-dbdb270" "$ENGINE_DIR"
 
+log "5/5 Run wizard"
 cd "$ENGINE_DIR"
-python3 scripts/install/andrew_install_wizard.py
+python3 scripts/install/andrew_install_wizard.py "${@:-}"

@@ -3,7 +3,8 @@
 Public installer entrypoint for DawsOS installs.
 
 - This repo contains **no secrets**.
-- It bootstraps access to the private engine repo (`mwd474747/dawsos-engine`) via GitHub CLI device/browser login.
+- It installs from a **public release artifact** (no GitHub login required).
+- Docker pulls still occur as part of runtime setup.
 
 ## Andrew v1 (fresh Mac, Docker required)
 
@@ -14,12 +15,15 @@ curl -fsSL https://raw.githubusercontent.com/mwd474747/dawsos-install/main/insta
 ```
 
 What it does:
-- downloads `bootstrap_andrew_v1.sh` (no secrets)
-- installs prerequisites (Xcode CLT, Homebrew, gh)
-- performs GitHub device/browser login to access private `mwd474747/dawsos-engine`
-- validates access before cloning (so it won’t hang at git)
+- downloads a **pinned public engine bundle** from GitHub Releases
+- verifies SHA256
+- extracts into `~/.openclaw/workspace/dawsos-engine`
 - verifies Docker Desktop is installed + running
-- clones the engine at a pinned ref and launches the install wizard
+- launches the install wizard
+
+What it avoids:
+- `gh auth login`
+- `git clone` of private repos
 
 Fallback: see `INSTALL_ANDREW_V1.md` (fully inlined) and `TROUBLESHOOT_GIT.md`.
 
