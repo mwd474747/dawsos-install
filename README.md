@@ -14,11 +14,17 @@ Public installer entrypoint for DawsOS installs.
 curl -fsSL https://raw.githubusercontent.com/mwd474747/dawsos-install/main/install.sh | bash
 ```
 
+Dry-run (diagnostic):
+```bash
+curl -fsSL https://raw.githubusercontent.com/mwd474747/dawsos-install/main/install.sh | bash -s -- --dry-run
+```
+
 What it does:
 - downloads a **pinned public engine bundle** from GitHub Releases
 - verifies SHA256
 - extracts into `~/.openclaw/workspace/dawsos-engine`
 - verifies Docker Desktop is installed + running
+- ensures Node.js + OpenClaw are installed
 - launches the install wizard
 
 What it avoids:

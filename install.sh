@@ -66,6 +66,42 @@ tar -xzf "$TMP" -C "$WS"
 rm -rf "$ENGINE_DIR"
 mv "$WS/dawsos-engine-dbdb270" "$ENGINE_DIR"
 
-log "5/5 Run wizard"
+log "5/6 Ensure Node.js + OpenClaw"
+
+brew_shellenv() {
+  if [ -x /opt/homebrew/bin/brew ]; then eval "$(/opt/homebrew/bin/brew shellenv)"; return 0; fi
+  if [ -x /usr/local/bin/brew ]; then eval "$(/usr/local/bin/brew shellenv)"; return 0; fi
+  return 1
+}
+
+ensure_brew() {
+  if command -v brew >/dev/null 2>&1; then
+    brew_shellenv || true
+    return 0
+  fi
+  echo "Homebrew missing." >&2
+  read -r -p "Install Homebrew now? [y/N] " yn
+  [[ "$yn" =~ ^[Yy]$ ]] || die "Aborting."
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  brew_shellenv || die "brew installed but not found. Open a NEW Terminal and rerun."
+}
+
+if ! command -v node >/dev/null 2>&1; then
+  ensure_brew
+  log "Installing Node.js (required for OpenClaw)"
+  brew install node
+fi
+
+if ! command -v openclaw >/dev/null 2>&1; then
+  log "Installing OpenClaw (npm global)"
+  npm install -g openclaw
+fi
+
+log "6/6 Run wizard"
 cd "$ENGINE_DIR"
-python3 scripts/install/andrew_install_wizard.py "${@:-}"
+# Only forward arguments if explicitly provided (avoid passing stray 'bash' when piped)
+WIZ_ARGS=()
+if [ "$#" -gt 0 ]; then
+  WIZ_ARGS=("$@")
+fi
+python3 scripts/install/andrew_install_wizard.py "${WIZ_ARGS[@]}"
