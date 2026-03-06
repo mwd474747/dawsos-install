@@ -15,7 +15,7 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.9"
+INSTALLER_VERSION="install-v1.0.10"
 ENGINE_BUNDLE_TAG="dawsos-bundle-v1-7e1514a"
 ENGINE_ASSET="dawsos-engine-7e1514a.tar.gz"
 ENGINE_SHA256_ASSET="dawsos-engine-7e1514a.tar.gz.sha256"
@@ -108,11 +108,19 @@ log "5/7 Set active bundle pointer"
 rm -rf "$ACTIVE_LINK"
 ln -s "$ENGINE_BUNDLE_DIR" "$ACTIVE_LINK"
 
-log "6/7 Point workspace engine symlink at active"
+log "6/8 Point workspace engine symlink at active"
 rm -rf "$ENGINE_DIR"
 ln -s "$ACTIVE_LINK" "$ENGINE_DIR"
 
-log "7/7 Ensure Node.js + OpenClaw"
+log "7/8 Legacy-compat symlink (optional): dawsco-engine"
+# Migration guard: many legacy scripts/cron payloads may still reference $WS/dawsco-engine.
+# Create a compat symlink unless explicitly disabled.
+if [ "${DAWSOS_DISABLE_DAWSCO_ENGINE_COMPAT:-}" != "1" ]; then
+  rm -rf "$WS/dawsco-engine"
+  ln -s "$ENGINE_DIR" "$WS/dawsco-engine"
+fi
+
+log "8/9 Ensure Node.js + OpenClaw"
 
 brew_shellenv() {
   if [ -x /opt/homebrew/bin/brew ]; then eval "$(/opt/homebrew/bin/brew shellenv)"; return 0; fi
@@ -143,7 +151,7 @@ if ! command -v openclaw >/dev/null 2>&1; then
   npm install -g openclaw
 fi
 
-log "8/8 Validate bundle manifest + run wizard"
+log "9/9 Validate bundle manifest + run wizard"
 cd "$ENGINE_DIR"
 
 # Write an explicit bootstrap receipt (control-surface friendly)
