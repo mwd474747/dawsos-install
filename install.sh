@@ -15,7 +15,7 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.0"
+INSTALLER_VERSION="install-v1.0.1"
 ENGINE_BUNDLE_TAG="andrew-v1-dbdb270"
 ENGINE_ASSET="dawsos-engine-dbdb270.tar.gz"
 ENGINE_SHA256_ASSET="dawsos-engine-dbdb270.tar.gz.sha256"
@@ -80,11 +80,17 @@ tar -xzf "$TMP" -C "$BUNDLES_DIR"
 rm -rf "$ENGINE_BUNDLE_DIR"
 mv "$BUNDLES_DIR/dawsos-engine-dbdb270" "$ENGINE_BUNDLE_DIR"
 
-log "5/7 Point workspace at bundle (symlink)"
+log "5/8 Point workspace at bundle (symlink)"
 rm -rf "$ENGINE_DIR"
 ln -s "$ENGINE_BUNDLE_DIR" "$ENGINE_DIR"
 
-log "6/7 Ensure Node.js + OpenClaw"
+# Compatibility: the wizard/stages reference a workspace-local `dawsco-engine/` path.
+# In artifact mode, the engine bundle lives under `dawsos-engine/`.
+log "6/8 Create workspace compatibility symlink (dawsco-engine)"
+rm -rf "$WS/dawsco-engine"
+ln -s "$ENGINE_DIR/dawsco-engine" "$WS/dawsco-engine"
+
+log "7/8 Ensure Node.js + OpenClaw"
 
 brew_shellenv() {
   if [ -x /opt/homebrew/bin/brew ]; then eval "$(/opt/homebrew/bin/brew shellenv)"; return 0; fi
@@ -115,7 +121,7 @@ if ! command -v openclaw >/dev/null 2>&1; then
   npm install -g openclaw
 fi
 
-log "7/7 Run wizard"
+log "8/8 Run wizard"
 cd "$ENGINE_DIR"
 
 # Write an explicit bootstrap receipt (control-surface friendly)
