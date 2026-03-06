@@ -11,12 +11,18 @@ Public installer entrypoint for DawsOS installs.
 ### One command
 
 ```bash
+# Recommended (immutable tag; avoids cache issues)
+curl -fsSL https://raw.githubusercontent.com/mwd474747/dawsos-install/install-v1.0.0/install.sh | bash
+```
+
+(Dev only / may be cached):
+```bash
 curl -fsSL https://raw.githubusercontent.com/mwd474747/dawsos-install/main/install.sh | bash
 ```
 
 Dry-run (diagnostic):
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mwd474747/dawsos-install/main/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/mwd474747/dawsos-install/install-v1.0.0/install.sh | bash -s -- --dry-run
 ```
 
 What it does:

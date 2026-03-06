@@ -15,14 +15,20 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-TAG="andrew-v1-dbdb270"
-ASSET="dawsos-engine-dbdb270.tar.gz"
-SHA256_EXPECTED="50a503717432ed65d4f338cd805e0985981663d5108ac8a60f7fd60110db352b"
-URL="https://github.com/mwd474747/dawsos-install/releases/download/${TAG}/${ASSET}"
+INSTALLER_VERSION="install-v1.0.0"
+ENGINE_BUNDLE_TAG="andrew-v1-dbdb270"
+ENGINE_ASSET="dawsos-engine-dbdb270.tar.gz"
+ENGINE_SHA256_ASSET="dawsos-engine-dbdb270.tar.gz.sha256"
+
+ENGINE_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_ASSET}"
+ENGINE_SHA256_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_SHA256_ASSET}"
 
 WS="${WS:-$HOME/.openclaw/workspace}"
+BUNDLES_DIR="$WS/engine-bundles"
+ENGINE_BUNDLE_DIR="$BUNDLES_DIR/$ENGINE_BUNDLE_TAG"
 ENGINE_DIR="$WS/dawsos-engine"
-TMP="/tmp/$ASSET"
+TMP="/tmp/$ENGINE_ASSET"
+TMP_SHA="/tmp/$ENGINE_SHA256_ASSET"
 
 log() { printf "[%s] %s\n" "$(date +%H:%M:%S)" "$*"; }
 die() { echo "ERROR: $*" >&2; exit 1; }
@@ -31,7 +37,9 @@ if [ "$(id -u)" -eq 0 ]; then
   die "Do not run this installer as root. Open a normal Terminal and rerun."
 fi
 
-log "DawsOS install (artifact mode): $TAG"
+log "DawsOS install (artifact mode)"
+log "  installer: $INSTALLER_VERSION"
+log "  engine_bundle: $ENGINE_BUNDLE_TAG"
 
 log "0/4 Xcode Command Line Tools"
 if ! xcode-select -p >/dev/null 2>&1; then
@@ -44,11 +52,16 @@ log "1/4 Docker (required)"
 command -v docker >/dev/null 2>&1 || die "docker CLI not found. Install Docker Desktop first."
 docker info >/dev/null 2>&1 || die "Docker Desktop not running. Start it first."
 
-log "2/5 Download engine bundle"
-mkdir -p "$WS"
-curl -fL --retry 3 --retry-delay 2 "$URL" -o "$TMP" || die "Failed to download $URL"
+log "2/7 Download engine bundle + sha256"
+mkdir -p "$WS" "$BUNDLES_DIR"
 
-log "3/5 Verify checksum"
+curl -fL --retry 3 --retry-delay 2 "$ENGINE_URL" -o "$TMP" || die "Failed to download $ENGINE_URL"
+curl -fL --retry 3 --retry-delay 2 "$ENGINE_SHA256_URL" -o "$TMP_SHA" || die "Failed to download $ENGINE_SHA256_URL"
+
+log "3/7 Verify checksum"
+EXPECTED="$(awk '{print $1}' "$TMP_SHA" | head -n 1)"
+[ -n "$EXPECTED" ] || die "Empty SHA256 file"
+
 if command -v shasum >/dev/null 2>&1; then
   GOT="$(shasum -a 256 "$TMP" | awk '{print $1}')"
 elif command -v sha256sum >/dev/null 2>&1; then
@@ -56,17 +69,22 @@ elif command -v sha256sum >/dev/null 2>&1; then
 else
   die "No SHA256 tool found (shasum/sha256sum)."
 fi
-[ "$GOT" = "$SHA256_EXPECTED" ] || die "SHA256 mismatch for $ASSET"
+[ "$GOT" = "$EXPECTED" ] || die "SHA256 mismatch for $ENGINE_ASSET"
 
-log "4/5 Extract bundle"
-rm -rf "$ENGINE_DIR"
+log "4/7 Extract bundle (versioned)"
+rm -rf "$ENGINE_BUNDLE_DIR"
+mkdir -p "$ENGINE_BUNDLE_DIR"
 # Artifact contains top-level folder dawsos-engine-dbdb270/
-tar -xzf "$TMP" -C "$WS"
-# Normalize folder name
-rm -rf "$ENGINE_DIR"
-mv "$WS/dawsos-engine-dbdb270" "$ENGINE_DIR"
+tar -xzf "$TMP" -C "$BUNDLES_DIR"
+# Normalize folder name inside bundle dir
+rm -rf "$ENGINE_BUNDLE_DIR"
+mv "$BUNDLES_DIR/dawsos-engine-dbdb270" "$ENGINE_BUNDLE_DIR"
 
-log "5/6 Ensure Node.js + OpenClaw"
+log "5/7 Point workspace at bundle (symlink)"
+rm -rf "$ENGINE_DIR"
+ln -s "$ENGINE_BUNDLE_DIR" "$ENGINE_DIR"
+
+log "6/7 Ensure Node.js + OpenClaw"
 
 brew_shellenv() {
   if [ -x /opt/homebrew/bin/brew ]; then eval "$(/opt/homebrew/bin/brew shellenv)"; return 0; fi
@@ -97,8 +115,32 @@ if ! command -v openclaw >/dev/null 2>&1; then
   npm install -g openclaw
 fi
 
-log "6/6 Run wizard"
+log "7/7 Run wizard"
 cd "$ENGINE_DIR"
+
+# Write an explicit bootstrap receipt (control-surface friendly)
+OPS_DIR="$WS/reports/ops"
+mkdir -p "$OPS_DIR"
+RECEIPT="$OPS_DIR/andrew-install-artifact-bootstrap-receipt-latest.json"
+cat > "$RECEIPT" <<JSON
+{
+  "kind": "receipt",
+  "schema_version": "0.2.0",
+  "name": "andrew_install_artifact_bootstrap",
+  "status": "pass",
+  "installer_version": "${INSTALLER_VERSION}",
+  "engine_bundle_tag": "${ENGINE_BUNDLE_TAG}",
+  "engine_asset": "${ENGINE_ASSET}",
+  "engine_url": "${ENGINE_URL}",
+  "engine_sha256_url": "${ENGINE_SHA256_URL}",
+  "engine_sha256_expected": "${EXPECTED}",
+  "engine_sha256_got": "${GOT}",
+  "workspace": "${WS}",
+  "engine_dir": "${ENGINE_DIR}",
+  "engine_bundle_dir": "${ENGINE_BUNDLE_DIR}"
+}
+JSON
+
 # Only forward arguments if explicitly provided (avoid passing stray 'bash' when piped)
 if [ "$#" -gt 0 ]; then
   python3 scripts/install/andrew_install_wizard.py "$@"
