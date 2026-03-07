@@ -15,10 +15,10 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.33"
-ENGINE_BUNDLE_TAG="dawsos-bundle-v1-b0f7d7c"
-ENGINE_ASSET="dawsos-engine-b0f7d7c.tar.gz"
-ENGINE_SHA256_ASSET="dawsos-engine-b0f7d7c.tar.gz.sha256"
+INSTALLER_VERSION="install-v1.0.34"
+ENGINE_BUNDLE_TAG="dawsos-bundle-v1-1ff2281"
+ENGINE_ASSET="dawsos-engine-1ff2281.tar.gz"
+ENGINE_SHA256_ASSET="dawsos-engine-1ff2281.tar.gz.sha256"
 
 ENGINE_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_ASSET}"
 ENGINE_SHA256_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_SHA256_ASSET}"
@@ -155,7 +155,13 @@ else
   log "compat: disabled (set DAWSOS_ENABLE_DAWSCO_ENGINE_COMPAT=1 to enable)"
 fi
 
-log "8/9 Ensure Node.js + OpenClaw"
+log "8/10 Seed cron jobs (authoritative for dawsos-*)"
+python3 scripts/ops/dawsos_cron_seed.py --authoritative >/dev/null 2>&1 || {
+  echo "WARN: cron seed failed (non-fatal)." >&2
+  python3 scripts/ops/dawsos_cron_seed.py --authoritative >&2 || true
+}
+
+log "9/10 Ensure Node.js + OpenClaw"
 
 brew_shellenv() {
   if [ -x /opt/homebrew/bin/brew ]; then eval "$(/opt/homebrew/bin/brew shellenv)"; return 0; fi
@@ -186,7 +192,7 @@ if ! command -v openclaw >/dev/null 2>&1; then
   npm install -g openclaw
 fi
 
-log "9/9 Validate bundle manifest + run wizard"
+log "10/10 Validate bundle manifest + run wizard"
 cd "$ENGINE_DIR"
 
 # Write an explicit bootstrap receipt (control-surface friendly)
