@@ -15,10 +15,10 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.41"
-ENGINE_BUNDLE_TAG="dawsos-bundle-src-20260308-021653Z"
-ENGINE_ASSET="dawsos-engine-1a924b6.tar.gz"
-ENGINE_SHA256_ASSET="dawsos-engine-1a924b6.tar.gz.sha256"
+INSTALLER_VERSION="install-v1.0.42"
+ENGINE_BUNDLE_TAG="dawsos-bundle-src-20260308-022110Z"
+ENGINE_ASSET="dawsos-engine-5efa754.tar.gz"
+ENGINE_SHA256_ASSET="dawsos-engine-5efa754.tar.gz.sha256"
 
 ENGINE_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_ASSET}"
 ENGINE_SHA256_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_SHA256_ASSET}"
