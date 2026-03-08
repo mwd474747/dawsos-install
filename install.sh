@@ -15,10 +15,10 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.39"
-ENGINE_BUNDLE_TAG="dawsos-bundle-src-20260308-014959Z"
-ENGINE_ASSET="dawsos-engine-d870568.tar.gz"
-ENGINE_SHA256_ASSET="dawsos-engine-d870568.tar.gz.sha256"
+INSTALLER_VERSION="install-v1.0.40"
+ENGINE_BUNDLE_TAG="dawsos-bundle-src-20260308-021129Z"
+ENGINE_ASSET="dawsos-engine-72291a3.tar.gz"
+ENGINE_SHA256_ASSET="dawsos-engine-72291a3.tar.gz.sha256"
 
 ENGINE_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_ASSET}"
 ENGINE_SHA256_URL="https://github.com/mwd474747/dawsos-install/releases/download/${ENGINE_BUNDLE_TAG}/${ENGINE_SHA256_ASSET}"
@@ -156,9 +156,12 @@ else
 fi
 
 log "8/10 Seed cron jobs (authoritative for dawsos-*)"
-python3 scripts/ops/dawsos_cron_seed.py --authoritative >/dev/null 2>&1 || {
+(
+  cd "$ENGINE_DIR"
+  python3 scripts/ops/dawsos_cron_seed.py --authoritative >/dev/null 2>&1
+) || {
   echo "WARN: cron seed failed (non-fatal)." >&2
-  python3 scripts/ops/dawsos_cron_seed.py --authoritative >&2 || true
+  (cd "$ENGINE_DIR" && python3 scripts/ops/dawsos_cron_seed.py --authoritative >&2) || true
 }
 
 log "9/10 Ensure Node.js + OpenClaw"
