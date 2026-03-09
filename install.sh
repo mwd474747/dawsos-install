@@ -15,7 +15,7 @@ set -euo pipefail
 # - Docker is still required.
 # - This flow avoids `gh auth login` + `git clone` entirely.
 
-INSTALLER_VERSION="install-v1.0.46"
+INSTALLER_VERSION="install-v1.0.47"
 ENGINE_BUNDLE_TAG="dawsos-bundle-src-20260308-024733Z"
 ENGINE_ASSET="dawsos-engine-9643df9.tar.gz"
 ENGINE_SHA256_ASSET="dawsos-engine-9643df9.tar.gz.sha256"
@@ -235,3 +235,104 @@ if [ "$#" -gt 0 ]; then
 else
   python3 scripts/install/partner_install_wizard.py
 fi
+
+# --- Post-install: PR-lane readiness preflight (best-effort) ---
+# Rationale: PR-lane capability is node-local (git remote + fetch + identity + provider auth).
+# This installer runs in artifact mode and avoids git/gh requirements for core install, so
+# we record readiness separately as an observation receipt.
+log "Post-install: PR-lane readiness preflight (best-effort)"
+python3 - <<'PY' || echo "WARN: PR-lane readiness preflight failed (non-fatal)." >&2
+import json, os, subprocess, time
+from datetime import datetime, timezone
+from pathlib import Path
+
+def iso_now():
+  return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z')
+
+def run(cmd, cwd, timeout=20):
+  p = subprocess.run(cmd, cwd=str(cwd), text=True, capture_output=True, timeout=timeout)
+  return p.returncode, (p.stdout or '').strip(), (p.stderr or '').strip()
+
+ws = Path(os.environ.get('WS') or (Path.home()/'.openclaw'/'workspace')).resolve()
+ops = ws/'reports'/'ops'
+ops.mkdir(parents=True, exist_ok=True)
+state_p = ops/'git-pr-lane-readiness-state-latest.json'
+rcpt_p = ops/'git-pr-lane-readiness-receipt-latest.json'
+
+node_id = os.environ.get('DAWSOS_NODE_ID') or os.environ.get('NODE_ID') or 'mbp'
+checks=[]
+warnings=[]
+errors=[]
+
+# git repo present
+if (ws/'.git').exists():
+  checks.append({'check_id':'git_repo_present','status':'pass','detail':'workspace has .git','evidence':{'path':str(ws/'.git')}})
+else:
+  checks.append({'check_id':'git_repo_present','status':'warn','detail':'workspace missing .git (artifact installs may be non-git)','evidence':{'path':str(ws/'.git')}})
+  warnings.append('missing_git_repo')
+
+# origin remote
+origin_url=None
+rc,out,err = run(['git','remote','get-url','origin'], cwd=ws, timeout=5)
+if rc==0 and out:
+  origin_url=out
+  checks.append({'check_id':'git_origin_present','status':'pass','detail':'origin configured','evidence':{'origin_url':origin_url}})
+else:
+  checks.append({'check_id':'git_origin_present','status':'warn','detail':'origin missing (PR-lane blocked)','evidence':{'stderr':err}})
+  warnings.append('missing_origin_remote')
+
+# fetch dry-run
+if origin_url:
+  rc,out,err = run(['git','fetch','--dry-run','origin'], cwd=ws, timeout=20)
+  if rc==0:
+    checks.append({'check_id':'git_fetch_origin_dry_run','status':'pass','detail':'fetch ok','evidence':{}})
+  else:
+    checks.append({'check_id':'git_fetch_origin_dry_run','status':'warn','detail':'fetch failed (PR-lane blocked)','evidence':{'stderr':err}})
+    warnings.append('origin_fetch_failed')
+
+# identity
+rc,name,_ = run(['git','config','--get','user.name'], cwd=ws, timeout=5)
+rc2,email,_ = run(['git','config','--get','user.email'], cwd=ws, timeout=5)
+name=name.strip() if rc==0 else ''
+email=email.strip() if rc2==0 else ''
+if name and email:
+  checks.append({'check_id':'git_identity_configured','status':'pass','detail':'git identity set','evidence':{'user.name':name,'user.email':email}})
+else:
+  checks.append({'check_id':'git_identity_configured','status':'warn','detail':'git identity missing (PR-lane blocked)','evidence':{'user.name':name or None,'user.email':email or None}})
+  warnings.append('missing_git_identity')
+
+# provider auth (gh)
+rc,out,err = run(['gh','auth','status'], cwd=ws, timeout=10)
+if rc==0:
+  checks.append({'check_id':'provider_auth','status':'pass','detail':'gh auth ok','evidence':{'summary':out.splitlines()[:6]}})
+else:
+  checks.append({'check_id':'provider_auth','status':'warn','detail':'gh auth missing (PR-lane blocked)','evidence':{'stderr':err or out}})
+  warnings.append('missing_provider_auth')
+
+# status
+status = 'pass' if not warnings and not errors else ('warn' if not errors else 'fail')
+state={
+  'kind':'git_pr_lane_readiness.v0',
+  'schema_version':'0.1.0',
+  'generated_at': iso_now(),
+  'node_id': node_id,
+  'status': status,
+  'checks': checks,
+  'warnings': warnings,
+  'errors': errors,
+}
+state_p.write_text(json.dumps(state, indent=2)+'\n', encoding='utf-8')
+receipt={
+  'kind':'receipt',
+  'schema_version':'0.2.0',
+  'ts': iso_now(),
+  'name':'git_pr_lane_readiness_check',
+  'status': status,
+  'summary': f"status={status} warnings={len(warnings)} errors={len(errors)}",
+  'warnings': warnings,
+  'errors': errors,
+  'artifacts': [str(state_p), str(rcpt_p)],
+}
+rcpt_p.write_text(json.dumps(receipt, indent=2)+'\n', encoding='utf-8')
+print(receipt['summary'])
+PY
